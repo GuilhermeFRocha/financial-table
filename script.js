@@ -93,7 +93,7 @@ const DOM = {
 
 const Utils = {
     formatCurrency(value){
-        const gignal = Number(value) < 0 ? "-" : ""
+        const signal = Number(value) < 0 ? "-" : ""
     }
 }
 
