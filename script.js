@@ -1,198 +1,274 @@
 const Modal = {
-
-    toggle() {
-        document.querySelector(".modal-overlay").classList.toggle("active")
-    }
-
-    /*  O codigo acima simplifica o abaixo com a tag toggle
-
-    open () {
-        // Abrir modal
-        // Adicionar a class active ao modal
-        
-        document.querySelector(".modal-overlay").classList.add("active")
+    open(){
+        document.querySelector('.modal-overlay')
+        .classList.add('active')
     },
-    close () {
-        // Fechar modal
-        // Remover a class active ao modal
-
-        document.querySelector(".modal-overlay").classList.remove("active")
+    close(){
+        document.querySelector('.modal-overlay')
+        .classList.remove('active')
     }
-    */
 }
 
-//Dados da tabela
+// Armanezamento no Browser
+const Storage = {
+    // Função que traz os lançamentos armanezados no localStorage e converte de Strig para o tipo array ou object (JSON.parse)
+    get() {
+        return JSON.parse(localStorage.getItem("dev.finances:transactions")) || []
+    },
+    
+    // Adiciona os lançamentos no localStorage e converte de array para String (JSON.stringify)
+    set(transactions) {
+        localStorage.setItem("dev.finances:transactions", JSON.stringify(transactions))
+    }
+}
 
-// Calculo da Entrada menos Saída e o Total 
-// Eu preciso somar as entradas
-// depois eu preciso somar as saídas
-// remover das entradas o valor da saídas
-// assim, eu terei o total
-
+// Objeto com métodos de transações de inclusão e exclusão de lançamentos, soma das Entradas, Saídas, e total
 const Transaction = {
-    all: [{
-            description: "luz",
-            amount: -50000,
-            date: "23/01/2021"
-        },
-
-        {
-            description: "Website",
-            amount: 500000,
-            date: "23/01/2021"
-        },
-
-        {
-            description: "Internet",
-            amount: -20000,
-            date: "23/01/2021"
-
-        }, {
-            description: "App",
-            amount: 200000,
-            date: "23/01/2021"
-        },
-    ],
-
+    // Executa função que traz os lançamentos que estão no localStorage
+    all: Storage.get(),
+    
+    // Recebe os dados de "transaction" via parâmetro e adiciona lançamento como elemento de um array pelo método "push"
     add(transaction) {
-        Transaction.all.push(transaction)
+        Transaction.all.unshift(transaction)
+
         App.reload()
     },
 
-    remove(index) {
+    // Remove lançamento
+    remove(index){
         Transaction.all.splice(index, 1)
+ 
         App.reload()
     },
 
+    //Função de soma das entradas 
     incomes() {
-        // somar as entradas
-        let income = 0
-        // pegar todas as transações
-        // para cada transacao
-        Transaction.all.forEach(function (transaction) {
-            // se ela for maior que zero    
-            if (transaction.amount > 0) {
-                // somar a uma variavel e retornar a variavel
-                income = income + transaction.amount
-            }
-        })
+        let income = 0;
+    
+        Transaction.all.forEach(transaction => {
+                if(transaction.amount > 0) {
+                    income += transaction.amount;
+                }
+            } 
+        )
 
-        return income
+        return income;
     },
+
+    //Função de soma das saídas
     expenses() {
-        //somar as saídas
-        let expense = 0
-        // pegar todas as transações
-        // para cada transacao
-        Transaction.all.forEach(function (transaction) {
-            // se ela for menor que zero    
-            if (transaction.amount < 0) {
-                // somar a uma variavel e retornar a variavel
-                expense = expense + transaction.amount
-            }
-        })
+        let expense = 0;
 
-        return expense
+        Transaction.all.forEach(transaction => {
+                if(transaction.amount < 0) {
+                    expense += transaction.amount;
+                }
+            }
+        )
+
+        return expense;
     },
-    total() {
-        //entradas - saídas
-        return Transaction.incomes() + Transaction.expenses()
+
+    // Função de soma Total
+    total () {
+        
+        let total = 0;
+
+        total = Transaction.incomes() + Transaction.expenses()
+        
+        return total;
     }
 }
 
-// Substituir os dados do HTML com os dados de JS
-
+// Manipula os dados no HTML
 const DOM = {
-    transactionsContainer: document.querySelector("#data-table tbody"),
-
+    // Chama a tabela a ser inserido os dados no HTML
+    transactionsContainer: document.querySelector('#data-table tbody'),
+    
+    // Inclui os lançamentos no HTML (linha da tabela)
     addTransaction(transaction, index) {
-        const tr = document.createElement("tr")
-        tr.innerHTML = DOM.innerHTMLTransaction(transaction)
+
+        const tr = document.createElement('tr')
+        tr.innerHTML = DOM.innerHTMLTransaction(transaction, index)
+        tr.dataset.index = index;
+
         DOM.transactionsContainer.appendChild(tr)
 
     },
-
-    innerHTMLTransaction(transaction) {
-
+    
+    //Inclui dados dos lançamentos no HTML (dados da linha)
+    innerHTMLTransaction(transaction, index) {
+        
         const CSSclass = transaction.amount > 0 ? "income" : "expense"
 
         const amount = Utils.formatCurrency(transaction.amount)
 
-
-        const html = `
-            <td class="descripition">${transaction.description}</td>
+        const html =
+        // Template literals 
+        `
+            <td class="description">${transaction.description}</td>
             <td class="${CSSclass}">${amount}</td>
-            <td class="date">${transaction.date}</td>
-            <td><img src="./assets/minus.svg" alt="Remover transação"></td>
-         `
+            <td class='date'>${transaction.date}</td>
+            <td>
+                <img onclick="Transaction.remove(${index})" src="./assets/minus.svg" alt="Remover transação">
+            </td>
+        `
         return html
-    }, // Jogar na tela os resultados das somas 
+    },
+
+    // Atualiza valores totais de Entradas, Saídas e Total no HTML
     updateBalance() {
-        document.getElementById("incomeDisplay")
+        document
+            .getElementById('incomeDisplay')
             .innerHTML = Utils.formatCurrency(Transaction.incomes())
-
-        document.getElementById("expenseDisplay")
+        document
+            .getElementById('expenseDisplay')
             .innerHTML = Utils.formatCurrency(Transaction.expenses())
-
-        document.getElementById("totalDisplay")
+        document
+            .getElementById('totalDisplay')
             .innerHTML = Utils.formatCurrency(Transaction.total())
     },
 
+    // Limpa tela. Obs: No primeiro lançamento como não tem nenhum elemento no array, ele não limpa nada. Mas a partir do segundo lançado para não dar duplicidade, ele limpa o primeiro elemento já lançado e lança de novo junto com o segundo, pois agora teremos 2 elementos no array.
     clearTransactions() {
         DOM.transactionsContainer.innerHTML = ""
     }
-
 }
 
-//Formatando o numero para REAL
+// formatadores (R$, date)
+const Utils = { 
+    // Função para formatar input valor do form
+    formatAmount(value) {
+        value = Number(value) * 100
 
-const Utils = {
-    formatCurrency(value) {
+        return value
+    },
+    
+    // Função para formatar input data do form
+    formatDate(date){
+        const splittedDate = date.split("-")
+
+        return `${splittedDate[2]}/${splittedDate[1]}/${splittedDate[0]}`
+
+    },
+
+    // Função para formatar na moeda Real e adicionar o sinal nos totais
+    formatCurrency(value){
         const signal = Number(value) < 0 ? "-" : ""
 
         value = String(value).replace(/\D/g, "")
+        value = Number(value) / 100 
 
-        value = Number(value) / 100
-
-        value = value.toLocaleString("pt-BR", {
+        value = value.toLocaleString("pt-BR", 
+            {
             style: "currency",
             currency: "BRL"
-        })
+            }
+        )
 
         return signal + value
-
-    }
+    }  
 }
 
+// Manipula o form
 const Form = {
-    submit(event){
-        event.preventDefault()
+    // Selecionando os 3 inputs do Form (descrição, valor, data)
+    description: document.querySelector('input#description'),
+    amount: document.querySelector('input#amount'),
+    date: document.querySelector('input#date'),
 
-        // verificar se todas as informaçoes foram preenchidas
-        // formatar os dados para salvar
-        // salvar
-        // apagar os dados do formulario
-        // modeal feche
-        // atualizar a aplicação
+    // Agrupando os dados dos inputs em uma única função
+    getValues() {
+        return {
+            description: Form.description.value, 
+            amount: Form.amount.value,
+            date: Form.date.value
+        }
+    },
+
+    // Formata os dados dos inputs
+    formatValues() {
+        // Desestruturar: ao invés de criar uma variável para cara atributo do objeto, o JS nos dá esta opção conforme apresentado abaixo. Desta maneira já foi criado uma variável "description", "amount", e "date".
+        let {description, amount, date} = Form.getValues()
+
+        amount = Utils.formatAmount(amount)
+
+        date = Utils.formatDate(date)
+
+        return {
+            description,
+            amount,
+            date
+        }
+    },
+
+    // Valida se tem algum input do form vazio
+    ValidateFields() {
+        const {description, amount, date} = Form.getValues()
+        
+        if(description.trim() === "" || 
+           amount.trim() === "" || 
+           date.trim() === "") {
+               throw new Error("Por favor, preencha todos os campos")
+           }
+    },
+
+    // Função que recebe os dados de "transaction" por parâmetro e executa função que adiciona lançamentos passando como argumento os dados de "transaction"
+    saveTransaction(transaction) {
+        Transaction.add(transaction)
+    },
+    
+    //Limpa campos
+    clearFields() {
+        Form.description.value = "" 
+        Form.amount.value = ""
+        Form.date.value = ""
+    },
+    
+    // Envia os dados do "Form"
+    submit(event) {
+        event.preventDefault() // Remove os dados enviados pelo formulário da URL
+
+        try {
+            // Executa o validador e retorna o erro caso encontre algum campo vazio
+            Form.ValidateFields()
+            // Cria variável "transaction" que recebe os dados formatados da função formatValues
+            const transaction = Form.formatValues()
+            // Executa função saveTransaction passando como argumento os dados da variável "transaction"
+            Form.saveTransaction(transaction)
+            //Limpa os campos do form
+            Form.clearFields()
+            // Fecha o form
+            Modal.close()
+        } catch (error) {
+            // Retorna o erro caso tenha algo errado no validador.
+            alert(error.message)
+        }
     }
 }
 
-// Colocando e removendo os dados na tabela
-
+// Execução e reload do app
 const App = {
     init() {
-        Transaction.all.forEach(function (transaction) {
-            DOM.addTransaction(transaction)
+        // Função que pega os lançamentos e passa para função de inclusão no HTML. Este processo é chamado de "popular".
+        Transaction.all.forEach((transaction, index) => {
+            
+            DOM.addTransaction(transaction, index)
+        
         })
+        
+        // Executa a função para atualizar os valores de Entradas, Saídas, e total
         DOM.updateBalance()
+
+        // Executa função de armazenamento no localStorage armazenando a transação que está no array "Transaction.all"
+        Storage.set(Transaction.all)
     },
 
+    // Executa a função "clearTransactions" que limpa os dados que estão na tela para que não fique duplicados e reinicia a aplicação 
     reload() {
-        // Limpa todo o codigo com string vazia ""
         DOM.clearTransactions()
         App.init()
-    },
-
+    }
 }
 
 App.init()
